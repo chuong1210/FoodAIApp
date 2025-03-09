@@ -122,7 +122,14 @@ class _CameraScreenState extends State<CameraScreen>
               if (snapshot.connectionState == ConnectionState.done) {
                 return CameraPreview(_controller);
               } else {
-                return const Center(child: CircularProgressIndicator());
+                return Container(
+                  color: Colors.black,
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Color(0xFF1A73E8),
+                    ),
+                  ),
+                );
               }
             },
           ),
@@ -133,47 +140,102 @@ class _CameraScreenState extends State<CameraScreen>
               animation: _animation,
               builder: (context, child) {
                 return Positioned(
-                  top:
-                      MediaQuery.of(context).size.height * _animation.value -
+                  top: MediaQuery.of(context).size.height * _animation.value -
                       50,
                   left: 0,
                   right: 0,
-                  child: Container(height: 2, color: Colors.green),
+                  child: Container(
+                    height: 2,
+                    color: const Color(0xFF1A73E8),
+                  ),
                 );
               },
             ),
 
+          // Overlay with instructions
+          if (!_isScanning)
+            Positioned(
+              top: 100,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    'Position food in frame',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
           // Camera controls
           Positioned(
-            bottom: 20,
+            bottom: 0,
             left: 0,
             right: 0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Gallery button
-                IconButton(
-                  icon: const Icon(
-                    Icons.photo_library,
-                    color: Colors.white,
-                    size: 32,
-                  ),
-                  onPressed: _pickImage,
+            child: Container(
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.8),
+                    Colors.transparent,
+                  ],
                 ),
-
-                // Camera button
-                FloatingActionButton(
-                  onPressed: _isScanning ? null : _takePicture,
-                  backgroundColor: _isScanning ? Colors.grey : Colors.white,
-                  child: Icon(
-                    _isScanning ? Icons.hourglass_top : Icons.camera_alt,
-                    color: Colors.black,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Gallery button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.photo_library,
+                          color: Colors.white, size: 28),
+                      onPressed: _pickImage,
+                    ),
                   ),
-                ),
 
-                // Placeholder for layout balance
-                const SizedBox(width: 32),
-              ],
+                  // Camera button
+                  GestureDetector(
+                    onTap: _isScanning ? null : _takePicture,
+                    child: Container(
+                      height: 70,
+                      width: 70,
+                      decoration: BoxDecoration(
+                        color: _isScanning ? Colors.grey : Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF1A73E8),
+                          width: 3,
+                        ),
+                      ),
+                      child: Icon(
+                        _isScanning ? Icons.hourglass_top : Icons.camera_alt,
+                        color: Colors.black,
+                        size: 30,
+                      ),
+                    ),
+                  ),
+
+                  // Placeholder for layout balance
+                  const SizedBox(width: 50),
+                ],
+              ),
             ),
           ),
 
@@ -181,9 +243,15 @@ class _CameraScreenState extends State<CameraScreen>
           Positioned(
             top: 40,
             left: 20,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
             ),
           ),
         ],

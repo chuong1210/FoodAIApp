@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-import 'camera_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'screens/onboarding/onboarding_screen.dart';
+import 'screens/home_screen.dart';
+import 'services/user_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -8,122 +11,62 @@ void main() async {
   // Get available cameras
   final cameras = await availableCameras();
 
-  runApp(MyApp(cameras: cameras));
+  // Check if onboarding is complete
+  final isOnboardingComplete = await UserService.isOnboardingComplete();
+
+  runApp(MyApp(
+    cameras: cameras,
+    isOnboardingComplete: isOnboardingComplete,
+  ));
 }
 
 class MyApp extends StatelessWidget {
   final List<CameraDescription> cameras;
+  final bool isOnboardingComplete;
 
-  const MyApp({Key? key, required this.cameras}) : super(key: key);
+  const MyApp({
+    Key? key,
+    required this.cameras,
+    required this.isOnboardingComplete,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Food Recognition',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: HomeScreen(cameras: cameras),
-      debugShowCheckedModeBanner: false,
-    );
-  }
-}
-
-class HomeScreen extends StatefulWidget {
-  final List<CameraDescription> cameras;
-
-  const HomeScreen({Key? key, required this.cameras}) : super(key: key);
-
-  @override
-  _HomeScreenState createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  void _openCamera() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CameraScreen(cameras: widget.cameras),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Food Recognition')),
-      body: Center(
-        child:
-            _selectedIndex == 0
-                ? Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Food Recognition App',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      'Take a photo of food to identify it',
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 40),
-                    ElevatedButton.icon(
-                      onPressed: _openCamera,
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Open Camera'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-                : const Center(child: Text('History Screen')),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 6.0,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: <Widget>[
-            IconButton(
-              icon: Icon(
-                Icons.home,
-                color: _selectedIndex == 0 ? Colors.blue : Colors.grey,
-              ),
-              onPressed: () => _onItemTapped(0),
+        primaryColor: const Color(0xFF1A73E8),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1A73E8),
+          primary: const Color(0xFF1A73E8),
+          secondary: const Color(0xFF66B2FF),
+          background: Colors.white,
+        ),
+        fontFamily: 'Roboto',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1A73E8),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1A73E8),
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(30),
             ),
-            const SizedBox(width: 48.0),
-            IconButton(
-              icon: Icon(
-                Icons.history,
-                color: _selectedIndex == 1 ? Colors.blue : Colors.grey,
-              ),
-              onPressed: () => _onItemTapped(1),
-            ),
-          ],
+          ),
+        ),
+        floatingActionButtonTheme: const FloatingActionButtonThemeData(
+          backgroundColor: const Color(0xFF1A73E8),
+          foregroundColor: Colors.white,
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openCamera,
-        child: const Icon(Icons.camera_alt),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      home: isOnboardingComplete
+          ? HomeScreen(cameras: cameras)
+          : OnboardingScreen(cameras: cameras),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

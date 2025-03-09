@@ -35,8 +35,20 @@ final List<Map<String, dynamic>> foodDatabase = [
     'carbs': 40.0,
     'fat': 17.0,
   },
-  {'name': 'Sushi', 'calories': 200, 'protein': 9.0, 'carbs': 38.0, 'fat': 0.5},
-  {'name': 'Salad', 'calories': 120, 'protein': 3.5, 'carbs': 12.0, 'fat': 7.0},
+  {
+    'name': 'Sushi',
+    'calories': 200,
+    'protein': 9.0,
+    'carbs': 38.0,
+    'fat': 0.5,
+  },
+  {
+    'name': 'Salad',
+    'calories': 120,
+    'protein': 3.5,
+    'carbs': 12.0,
+    'fat': 7.0,
+  },
   {
     'name': 'Pasta',
     'calories': 320,
