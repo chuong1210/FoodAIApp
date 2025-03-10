@@ -3,7 +3,6 @@ class UserModel {
   double? weight; // kg
   double? targetWeight; // kg
   String? gender; // 'male', 'female', 'other'
-  DateTime? birthDate; // New field for date of birth
   List<String> medicalConditions = [];
   List<String> allergies = [];
   String? dietType; // 'vegetarian', 'vegan', 'high_protein', 'balanced', etc.
@@ -15,12 +14,14 @@ class UserModel {
     this.weight,
     this.targetWeight,
     this.gender,
-    this.birthDate, // Added birthDate parameter
-    this.medicalConditions = const [],
-    this.allergies = const [],
+    List<String>? medicalConditions,
+    List<String>? allergies,
     this.dietType,
     this.activityLevel,
-  });
+  }) {
+    this.medicalConditions = medicalConditions ?? [];
+    this.allergies = allergies ?? [];
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -28,7 +29,6 @@ class UserModel {
       'weight': weight,
       'targetWeight': targetWeight,
       'gender': gender,
-      'birthDate': birthDate?.millisecondsSinceEpoch, // Store as timestamp
       'medicalConditions': medicalConditions,
       'allergies': allergies,
       'dietType': dietType,
@@ -42,9 +42,6 @@ class UserModel {
       weight: json['weight'],
       targetWeight: json['targetWeight'],
       gender: json['gender'],
-      birthDate: json['birthDate'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['birthDate'])
-          : null,
       medicalConditions: List<String>.from(json['medicalConditions'] ?? []),
       allergies: List<String>.from(json['allergies'] ?? []),
       dietType: json['dietType'],

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
-import 'package:intl/intl.dart';
 import '../../models/user_model.dart';
 import '../../services/user_service.dart';
 import '../home_screen.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:camera/camera.dart';
 
 class OnboardingScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -15,18 +15,23 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   final UserModel _userData = UserModel();
   int _currentPage = 0;
-  DateTime? _selectedDate;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
 
-  // Default values for sliders
-  double _height = 170;
-  double _weight = 65;
-  double _targetWeight = 65;
+  // Controllers for sliders
+  double _heightValue = 170;
+  double _weightValue = 65;
+  double _targetWeightValue = 60;
+
+  // Date of birth
+  DateTime _selectedDate = DateTime.now()
+      .subtract(const Duration(days: 365 * 25)); // Default to 25 years old
+
+  // Animation controllers
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
 
   final List<String> _dietTypes = [
     'Balanced',
@@ -71,37 +76,48 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _fadeAnimation =
-        Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
-    _animationController.forward();
 
-    // Initialize user data with default slider values
-    _userData.height = _height;
-    _userData.weight = _weight;
-    _userData.targetWeight = _targetWeight;
+    // Set initial values for user data
+    _userData.height = _heightValue;
+    _userData.weight = _weightValue;
+    _userData.targetWeight = _targetWeightValue;
+
+    // Initialize animation controller
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0.3, 0.0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOut,
+    ));
+
+    _slideController.forward();
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _animationController.dispose();
+    _slideController.dispose();
     super.dispose();
   }
 
   void _nextPage() {
     if (_currentPage < 6) {
-      _animationController.reset();
+      // Don't reset animation before transition
       _pageController
           .nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       )
           .then((_) {
-        _animationController.forward();
+        // Reset and start animation only after page transition completes
+        _slideController.reset();
+        _slideController.forward();
       });
     } else {
       _completeOnboarding();
@@ -110,14 +126,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _previousPage() {
     if (_currentPage > 0) {
-      _animationController.reset();
+      // Don't reset animation before transition
       _pageController
           .previousPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       )
           .then((_) {
-        _animationController.forward();
+        // Reset and start animation only after page transition completes
+        _slideController.reset();
+        _slideController.forward();
       });
     }
   }
@@ -137,33 +155,59 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
+  void _showDatePicker() {
+    showModalBottomSheet(
       context: context,
-      initialDate: _selectedDate ??
-          DateTime.now().subtract(const Duration(days: 365 * 25)),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1A73E8),
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          height: 300,
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Hủy'),
+                  ),
+                  const Text(
+                    'Chọn ngày sinh',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() {});
+                    },
+                    child: const Text('Xác nhận'),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: CupertinoDatePicker(
+                  mode: CupertinoDatePickerMode.date,
+                  initialDateTime: _selectedDate,
+                  maximumDate: DateTime.now(),
+                  minimumDate: DateTime(1900),
+                  onDateTimeChanged: (DateTime newDate) {
+                    setState(() {
+                      _selectedDate = newDate;
+                    });
+                  },
+                ),
+              ),
+            ],
           ),
-          child: child!,
         );
       },
     );
-
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-        // You can add birthDate to your UserModel if needed
-      });
-    }
   }
 
   @override
@@ -193,11 +237,30 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: LinearProgressIndicator(
-                    value: (_currentPage + 1) / 7,
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(Colors.white),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Bước ${_currentPage + 1}/7',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: (_currentPage + 1) / 7,
+                        backgroundColor: Colors.white.withOpacity(0.3),
+                        valueColor:
+                            const AlwaysStoppedAnimation<Color>(Colors.white),
+                        borderRadius: BorderRadius.circular(10),
+                        minHeight: 8,
+                      ),
+                    ],
                   ),
                 ),
 
@@ -210,11 +273,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       setState(() {
                         _currentPage = page;
                       });
-                      _animationController.forward(from: 0.0);
                     },
                     children: [
                       _buildHeightWeightPage(),
-                      _buildGenderAndBirthDatePage(),
+                      _buildGenderAndBirthdayPage(),
                       _buildMedicalConditionsPage(),
                       _buildAllergiesPage(),
                       _buildDietTypePage(),
@@ -231,22 +293,37 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // Back button
-                      _currentPage > 0
-                          ? TextButton(
-                              onPressed: _previousPage,
-                              child: const Text(
-                                'Quay lại',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            )
-                          : const SizedBox(width: 80),
+                      if (_currentPage > 0)
+                        ElevatedButton.icon(
+                          onPressed: _previousPage,
+                          icon: const Icon(Icons.arrow_back),
+                          label: const Text('Quay lại'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.3),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                        )
+                      else
+                        const SizedBox(width: 120),
 
                       // Next/Complete button
-                      ElevatedButton(
+                      ElevatedButton.icon(
                         onPressed: _nextPage,
+                        icon: _currentPage < 6
+                            ? const Icon(Icons.arrow_forward)
+                            : const Icon(Icons.check),
+                        label: Text(
+                          _currentPage < 6 ? 'Tiếp tục' : 'Hoàn thành',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF1A73E8),
@@ -254,13 +331,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               horizontal: 30, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: Text(
-                          _currentPage < 6 ? 'Tiếp tục' : 'Hoàn thành',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -276,8 +346,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildHeightWeightPage() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
+    return SlideTransition(
+      position: _slideAnimation,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -307,6 +377,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -316,55 +393,119 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Chiều cao (cm)',
+                          'Chiều cao',
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A73E8),
-                          ),
-                        ),
-                        Text(
-                          '${_height.toInt()} cm',
-                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A73E8),
                           ),
                         ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A73E8).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${_heightValue.toInt()} cm',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A73E8),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: const Color(0xFF1A73E8),
-                        inactiveTrackColor: Colors.grey[200],
-                        thumbColor: const Color(0xFF1A73E8),
-                        overlayColor: const Color(0xFF1A73E8).withOpacity(0.2),
-                        thumbShape:
-                            const RoundSliderThumbShape(enabledThumbRadius: 12),
-                        overlayShape:
-                            const RoundSliderOverlayShape(overlayRadius: 24),
+
+                    // Custom height slider
+                    Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Slider(
-                        min: 120,
-                        max: 220,
-                        divisions: 100,
-                        value: _height,
-                        onChanged: (value) {
-                          setState(() {
-                            _height = value;
-                            _userData.height = value;
-                          });
-                        },
+                      child: Stack(
+                        children: [
+                          // Scale markings
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: List.generate(11, (index) {
+                              final height = 140 + (index * 5);
+                              return Container(
+                                width: 2,
+                                height: index % 2 == 0 ? 20 : 10,
+                                color: Colors.grey[400],
+                                margin: EdgeInsets.only(
+                                  left: index == 0 ? 10 : 0,
+                                  right: index == 10 ? 10 : 0,
+                                  top: 10,
+                                ),
+                              );
+                            }),
+                          ),
+
+                          // Slider
+                          SliderTheme(
+                            data: SliderThemeData(
+                              trackHeight: 2,
+                              activeTrackColor: const Color(0xFF1A73E8),
+                              inactiveTrackColor: Colors.grey[300],
+                              thumbColor: Colors.white,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 15,
+                                elevation: 4,
+                              ),
+                              overlayColor:
+                                  const Color(0xFF1A73E8).withOpacity(0.2),
+                              overlayShape: const RoundSliderOverlayShape(
+                                  overlayRadius: 25),
+                            ),
+                            child: Slider(
+                              value: _heightValue,
+                              min: 140,
+                              max: 190,
+                              onChanged: (value) {
+                                setState(() {
+                                  _heightValue = value;
+                                  _userData.height = value;
+                                });
+                              },
+                            ),
+                          ),
+
+                          // Height indicator
+                          Positioned(
+                            left: ((_heightValue - 140) / 50) *
+                                    (MediaQuery.of(context).size.width - 80) +
+                                20,
+                            bottom: 0,
+                            child: Container(
+                              width: 2,
+                              height: 40,
+                              color: const Color(0xFF1A73E8),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text('120 cm', style: TextStyle(color: Colors.grey)),
-                        Text('220 cm', style: TextStyle(color: Colors.grey)),
-                      ],
+
+                    // Height labels
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('140 cm',
+                              style: TextStyle(color: Colors.grey)),
+                          const Text('165 cm',
+                              style: TextStyle(color: Colors.grey)),
+                          const Text('190 cm',
+                              style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -377,6 +518,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -386,55 +534,118 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Cân nặng (kg)',
+                          'Cân nặng',
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A73E8),
-                          ),
-                        ),
-                        Text(
-                          '${_weight.toInt()} kg',
-                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A73E8),
                           ),
                         ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A73E8).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${_weightValue.toInt()} kg',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A73E8),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: const Color(0xFF1A73E8),
-                        inactiveTrackColor: Colors.grey[200],
-                        thumbColor: const Color(0xFF1A73E8),
-                        overlayColor: const Color(0xFF1A73E8).withOpacity(0.2),
-                        thumbShape:
-                            const RoundSliderThumbShape(enabledThumbRadius: 12),
-                        overlayShape:
-                            const RoundSliderOverlayShape(overlayRadius: 24),
+
+                    // Custom weight slider
+                    Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Slider(
-                        min: 30,
-                        max: 150,
-                        divisions: 120,
-                        value: _weight,
-                        onChanged: (value) {
-                          setState(() {
-                            _weight = value;
-                            _userData.weight = value;
-                          });
-                        },
+                      child: Stack(
+                        children: [
+                          // Scale markings
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: List.generate(11, (index) {
+                              return Container(
+                                width: 2,
+                                height: index % 2 == 0 ? 20 : 10,
+                                color: Colors.grey[400],
+                                margin: EdgeInsets.only(
+                                  left: index == 0 ? 10 : 0,
+                                  right: index == 10 ? 10 : 0,
+                                  top: 10,
+                                ),
+                              );
+                            }),
+                          ),
+
+                          // Slider
+                          SliderTheme(
+                            data: SliderThemeData(
+                              trackHeight: 2,
+                              activeTrackColor: const Color(0xFF1A73E8),
+                              inactiveTrackColor: Colors.grey[300],
+                              thumbColor: Colors.white,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 15,
+                                elevation: 4,
+                              ),
+                              overlayColor:
+                                  const Color(0xFF1A73E8).withOpacity(0.2),
+                              overlayShape: const RoundSliderOverlayShape(
+                                  overlayRadius: 25),
+                            ),
+                            child: Slider(
+                              value: _weightValue,
+                              min: 40,
+                              max: 120,
+                              onChanged: (value) {
+                                setState(() {
+                                  _weightValue = value;
+                                  _userData.weight = value;
+                                });
+                              },
+                            ),
+                          ),
+
+                          // Weight indicator
+                          Positioned(
+                            left: ((_weightValue - 40) / 80) *
+                                    (MediaQuery.of(context).size.width - 80) +
+                                20,
+                            bottom: 0,
+                            child: Container(
+                              width: 2,
+                              height: 40,
+                              color: const Color(0xFF1A73E8),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text('30 kg', style: TextStyle(color: Colors.grey)),
-                        Text('150 kg', style: TextStyle(color: Colors.grey)),
-                      ],
+
+                    // Weight labels
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('40 kg',
+                              style: TextStyle(color: Colors.grey)),
+                          const Text('80 kg',
+                              style: TextStyle(color: Colors.grey)),
+                          const Text('120 kg',
+                              style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -446,9 +657,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  Widget _buildGenderAndBirthDatePage() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
+  Widget _buildGenderAndBirthdayPage() {
+    return SlideTransition(
+      position: _slideAnimation,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -456,7 +667,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Thông tin cá nhân',
+                'Giới tính & Ngày sinh',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -465,7 +676,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
               const SizedBox(height: 10),
               const Text(
-                'Hãy cho chúng tôi biết giới tính và ngày sinh của bạn',
+                'Hãy cho chúng tôi biết thêm về bạn',
                 style: TextStyle(
                   fontSize: 16,
                   color: Colors.white,
@@ -478,6 +689,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -491,7 +709,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         color: Color(0xFF1A73E8),
                       ),
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 20),
                     Row(
                       children: [
                         Expanded(
@@ -512,11 +730,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
               const SizedBox(height: 20),
 
-              // Date of birth
+              // Birthday selection
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -530,29 +755,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         color: Color(0xFF1A73E8),
                       ),
                     ),
-                    const SizedBox(height: 15),
+                    const SizedBox(height: 20),
                     GestureDetector(
-                      onTap: () => _selectDate(context),
+                      onTap: _showDatePicker,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            vertical: 15, horizontal: 20),
+                            horizontal: 15, vertical: 12),
                         decoration: BoxDecoration(
                           color: Colors.grey[100],
                           borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Colors.grey[300]!,
+                            width: 1,
+                          ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              _selectedDate == null
-                                  ? 'Chọn ngày sinh'
-                                  : DateFormat('dd/MM/yyyy')
-                                      .format(_selectedDate!),
-                              style: TextStyle(
+                              '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                              style: const TextStyle(
                                 fontSize: 16,
-                                color: _selectedDate == null
-                                    ? Colors.grey[600]
-                                    : Colors.black87,
+                                color: Colors.black87,
                               ),
                             ),
                             const Icon(
@@ -561,6 +785,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             ),
                           ],
                         ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Tuổi: ${DateTime.now().year - _selectedDate.year}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
                       ),
                     ),
                   ],
@@ -584,7 +816,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF1A73E8) : Colors.white,
           borderRadius: BorderRadius.circular(15),
@@ -599,7 +831,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     color: const Color(0xFF1A73E8).withOpacity(0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ]
               : null,
         ),
@@ -607,7 +839,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           children: [
             Icon(
               icon,
-              size: 50,
+              size: 40,
               color: isSelected ? Colors.white : const Color(0xFF1A73E8),
             ),
             const SizedBox(height: 10),
@@ -626,8 +858,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildMedicalConditionsPage() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
+    return SlideTransition(
+      position: _slideAnimation,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -657,6 +889,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -664,28 +903,42 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     final isSelected =
                         _userData.medicalConditions.contains(condition);
 
-                    return InkWell(
+                    return GestureDetector(
                       onTap: () {
                         setState(() {
                           if (condition == 'None') {
-                            if (!_userData.medicalConditions.contains('None')) {
-                              _userData.medicalConditions = ['None'];
+                            if (!isSelected) {
+                              _userData.medicalConditions.clear();
+                              _userData.medicalConditions.add('None');
                             } else {
                               _userData.medicalConditions.remove('None');
                             }
                           } else {
-                            if (_userData.medicalConditions
-                                .contains(condition)) {
-                              _userData.medicalConditions.remove(condition);
-                            } else {
+                            if (!isSelected) {
                               _userData.medicalConditions.add(condition);
                               _userData.medicalConditions.remove('None');
+                            } else {
+                              _userData.medicalConditions.remove(condition);
                             }
                           }
                         });
                       },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 15),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF1A73E8).withOpacity(0.1)
+                              : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF1A73E8)
+                                : Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
                         child: Row(
                           children: [
                             AnimatedContainer(
@@ -693,16 +946,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               width: 24,
                               height: 24,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
+                                color: isSelected
+                                    ? const Color(0xFF1A73E8)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
                                   color: isSelected
                                       ? const Color(0xFF1A73E8)
-                                      : Colors.grey.withOpacity(0.5),
+                                      : Colors.grey[400]!,
                                   width: 2,
                                 ),
-                                color: isSelected
-                                    ? const Color(0xFF1A73E8)
-                                    : Colors.transparent,
                               ),
                               child: isSelected
                                   ? const Icon(
@@ -715,8 +968,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             const SizedBox(width: 12),
                             Text(
                               condition,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
+                                color: isSelected
+                                    ? const Color(0xFF1A73E8)
+                                    : Colors.black87,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                           ],
@@ -734,8 +993,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildAllergiesPage() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
+    return SlideTransition(
+      position: _slideAnimation,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -765,33 +1024,55 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: _commonAllergies.map((allergy) {
                     final isSelected = _userData.allergies.contains(allergy);
 
-                    return InkWell(
+                    return GestureDetector(
                       onTap: () {
                         setState(() {
                           if (allergy == 'None') {
-                            if (!_userData.allergies.contains('None')) {
-                              _userData.allergies = ['None'];
+                            if (!isSelected) {
+                              _userData.allergies.clear();
+                              _userData.allergies.add('None');
                             } else {
                               _userData.allergies.remove('None');
                             }
                           } else {
-                            if (_userData.allergies.contains(allergy)) {
-                              _userData.allergies.remove(allergy);
-                            } else {
+                            if (!isSelected) {
                               _userData.allergies.add(allergy);
                               _userData.allergies.remove('None');
+                            } else {
+                              _userData.allergies.remove(allergy);
                             }
                           }
                         });
                       },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 15),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF1A73E8).withOpacity(0.1)
+                              : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF1A73E8)
+                                : Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
                         child: Row(
                           children: [
                             AnimatedContainer(
@@ -799,16 +1080,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               width: 24,
                               height: 24,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(4),
+                                color: isSelected
+                                    ? const Color(0xFF1A73E8)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
                                   color: isSelected
                                       ? const Color(0xFF1A73E8)
-                                      : Colors.grey.withOpacity(0.5),
+                                      : Colors.grey[400]!,
                                   width: 2,
                                 ),
-                                color: isSelected
-                                    ? const Color(0xFF1A73E8)
-                                    : Colors.transparent,
                               ),
                               child: isSelected
                                   ? const Icon(
@@ -821,8 +1102,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             const SizedBox(width: 12),
                             Text(
                               allergy,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
+                                color: isSelected
+                                    ? const Color(0xFF1A73E8)
+                                    : Colors.black87,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                           ],
@@ -840,8 +1127,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildDietTypePage() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
+    return SlideTransition(
+      position: _slideAnimation,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -871,6 +1158,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -878,14 +1172,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     final isSelected =
                         _userData.dietType == dietType.toLowerCase();
 
-                    return InkWell(
+                    return GestureDetector(
                       onTap: () {
                         setState(() {
                           _userData.dietType = dietType.toLowerCase();
                         });
                       },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10.0),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 15),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF1A73E8).withOpacity(0.1)
+                              : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF1A73E8)
+                                : Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
                         child: Row(
                           children: [
                             AnimatedContainer(
@@ -893,31 +1201,38 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               width: 24,
                               height: 24,
                               decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF1A73E8)
+                                    : Colors.white,
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: isSelected
                                       ? const Color(0xFF1A73E8)
-                                      : Colors.grey.withOpacity(0.5),
+                                      : Colors.grey[400]!,
                                   width: 2,
                                 ),
                               ),
-                              child: Center(
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  width: isSelected ? 12 : 0,
-                                  height: isSelected ? 12 : 0,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Color(0xFF1A73E8),
-                                  ),
-                                ),
-                              ),
+                              child: isSelected
+                                  ? const Center(
+                                      child: Icon(
+                                        Icons.circle,
+                                        size: 12,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 12),
                             Text(
                               dietType,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
+                                color: isSelected
+                                    ? const Color(0xFF1A73E8)
+                                    : Colors.black87,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                           ],
@@ -935,8 +1250,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildTargetWeightPage() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
+    return SlideTransition(
+      position: _slideAnimation,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -966,6 +1281,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -975,55 +1297,118 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Cân nặng mục tiêu (kg)',
+                          'Cân nặng mục tiêu',
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A73E8),
-                          ),
-                        ),
-                        Text(
-                          '${_targetWeight.toInt()} kg',
-                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1A73E8),
                           ),
                         ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A73E8).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${_targetWeightValue.toInt()} kg',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A73E8),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: const Color(0xFF1A73E8),
-                        inactiveTrackColor: Colors.grey[200],
-                        thumbColor: const Color(0xFF1A73E8),
-                        overlayColor: const Color(0xFF1A73E8).withOpacity(0.2),
-                        thumbShape:
-                            const RoundSliderThumbShape(enabledThumbRadius: 12),
-                        overlayShape:
-                            const RoundSliderOverlayShape(overlayRadius: 24),
+
+                    // Custom target weight slider
+                    Container(
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Slider(
-                        min: 30,
-                        max: 150,
-                        divisions: 120,
-                        value: _targetWeight,
-                        onChanged: (value) {
-                          setState(() {
-                            _targetWeight = value;
-                            _userData.targetWeight = value;
-                          });
-                        },
+                      child: Stack(
+                        children: [
+                          // Scale markings
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: List.generate(11, (index) {
+                              return Container(
+                                width: 2,
+                                height: index % 2 == 0 ? 20 : 10,
+                                color: Colors.grey[400],
+                                margin: EdgeInsets.only(
+                                  left: index == 0 ? 10 : 0,
+                                  right: index == 10 ? 10 : 0,
+                                  top: 10,
+                                ),
+                              );
+                            }),
+                          ),
+
+                          // Slider
+                          SliderTheme(
+                            data: SliderThemeData(
+                              trackHeight: 2,
+                              activeTrackColor: const Color(0xFF1A73E8),
+                              inactiveTrackColor: Colors.grey[300],
+                              thumbColor: Colors.white,
+                              thumbShape: const RoundSliderThumbShape(
+                                enabledThumbRadius: 15,
+                                elevation: 4,
+                              ),
+                              overlayColor:
+                                  const Color(0xFF1A73E8).withOpacity(0.2),
+                              overlayShape: const RoundSliderOverlayShape(
+                                  overlayRadius: 25),
+                            ),
+                            child: Slider(
+                              value: _targetWeightValue,
+                              min: 40,
+                              max: 120,
+                              onChanged: (value) {
+                                setState(() {
+                                  _targetWeightValue = value;
+                                  _userData.targetWeight = value;
+                                });
+                              },
+                            ),
+                          ),
+
+                          // Target weight indicator
+                          Positioned(
+                            left: ((_targetWeightValue - 40) / 80) *
+                                    (MediaQuery.of(context).size.width - 80) +
+                                20,
+                            bottom: 0,
+                            child: Container(
+                              width: 2,
+                              height: 40,
+                              color: const Color(0xFF1A73E8),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text('30 kg', style: TextStyle(color: Colors.grey)),
-                        Text('150 kg', style: TextStyle(color: Colors.grey)),
-                      ],
+
+                    // Weight labels
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('40 kg',
+                              style: TextStyle(color: Colors.grey)),
+                          const Text('80 kg',
+                              style: TextStyle(color: Colors.grey)),
+                          const Text('120 kg',
+                              style: TextStyle(color: Colors.grey)),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -1048,9 +1433,109 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Cân nặng hiện tại của bạn: ${_userData.weight!.toInt()} kg',
+                          'Cân nặng hiện tại của bạn: ${_userData.weight?.toInt()} kg',
                           style: const TextStyle(
                             color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              const SizedBox(height: 20),
+
+              // Weight difference
+              if (_userData.weight != null)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Mục tiêu của bạn',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A73E8),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Column(
+                            children: [
+                              Text(
+                                '${_userData.weight?.toInt()} kg',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Text(
+                                'Hiện tại',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 15),
+                            width: 80,
+                            height: 2,
+                            color: Colors.grey[300],
+                          ),
+                          Column(
+                            children: [
+                              Text(
+                                '${_targetWeightValue.toInt()} kg',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF1A73E8),
+                                ),
+                              ),
+                              const Text(
+                                'Mục tiêu',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Center(
+                        child: Text(
+                          _userData.weight! > _targetWeightValue
+                              ? 'Bạn cần giảm ${(_userData.weight! - _targetWeightValue).toInt()} kg'
+                              : _userData.weight! < _targetWeightValue
+                                  ? 'Bạn cần tăng ${(_targetWeightValue - _userData.weight!).toInt()} kg'
+                                  : 'Bạn đã đạt được cân nặng mục tiêu!',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: _userData.weight! > _targetWeightValue
+                                ? Colors.orange
+                                : _userData.weight! < _targetWeightValue
+                                    ? Colors.green
+                                    : const Color(0xFF1A73E8),
                           ),
                         ),
                       ),
@@ -1065,8 +1550,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Widget _buildActivityLevelPage() {
-    return FadeTransition(
-      opacity: _fadeAnimation,
+    return SlideTransition(
+      position: _slideAnimation,
       child: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -1096,6 +1581,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -1105,14 +1597,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     final value = _getActivityLevelValue(index);
                     final isSelected = _userData.activityLevel == value;
 
-                    return InkWell(
+                    return GestureDetector(
                       onTap: () {
                         setState(() {
                           _userData.activityLevel = value;
                         });
                       },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10.0),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12, horizontal: 15),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? const Color(0xFF1A73E8).withOpacity(0.1)
+                              : Colors.grey[100],
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: isSelected
+                                ? const Color(0xFF1A73E8)
+                                : Colors.grey[300]!,
+                            width: 1,
+                          ),
+                        ),
                         child: Row(
                           children: [
                             AnimatedContainer(
@@ -1120,32 +1626,39 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                               width: 24,
                               height: 24,
                               decoration: BoxDecoration(
+                                color: isSelected
+                                    ? const Color(0xFF1A73E8)
+                                    : Colors.white,
                                 shape: BoxShape.circle,
                                 border: Border.all(
                                   color: isSelected
                                       ? const Color(0xFF1A73E8)
-                                      : Colors.grey.withOpacity(0.5),
+                                      : Colors.grey[400]!,
                                   width: 2,
                                 ),
                               ),
-                              child: Center(
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  width: isSelected ? 12 : 0,
-                                  height: isSelected ? 12 : 0,
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Color(0xFF1A73E8),
-                                  ),
-                                ),
-                              ),
+                              child: isSelected
+                                  ? const Center(
+                                      child: Icon(
+                                        Icons.circle,
+                                        size: 12,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 activityLevel,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
+                                  color: isSelected
+                                      ? const Color(0xFF1A73E8)
+                                      : Colors.black87,
+                                  fontWeight: isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                                 ),
                               ),
                             ),
@@ -1156,6 +1669,36 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   }).toList(),
                 ),
               ),
+
+              const SizedBox(height: 20),
+
+              // Activity level description
+              if (_userData.activityLevel != null)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  padding: const EdgeInsets.all(15),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          _getActivityLevelDescription(
+                              _userData.activityLevel!),
+                          style: const TextStyle(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
@@ -1177,6 +1720,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         return 'very_active';
       default:
         return 'moderate';
+    }
+  }
+
+  String _getActivityLevelDescription(String level) {
+    switch (level) {
+      case 'sedentary':
+        return 'Bạn hầu như không tập thể dục và có lối sống ít vận động.';
+      case 'light':
+        return 'Bạn tập thể dục nhẹ nhàng 1-3 lần mỗi tuần.';
+      case 'moderate':
+        return 'Bạn tập thể dục vừa phải 3-5 lần mỗi tuần.';
+      case 'active':
+        return 'Bạn tập thể dục đều đặn 6-7 lần mỗi tuần.';
+      case 'very_active':
+        return 'Bạn tập thể dục cường độ cao hàng ngày hoặc tập luyện thể thao chuyên nghiệp.';
+      default:
+        return '';
     }
   }
 }
