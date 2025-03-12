@@ -8,10 +8,7 @@ import 'services/user_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Get available cameras
   final cameras = await availableCameras();
-
-  // Check if onboarding is complete
   final isOnboardingComplete = await UserService.isOnboardingComplete();
 
   runApp(MyApp(
@@ -43,6 +40,11 @@ class MyApp extends StatelessWidget {
           background: Colors.white,
         ),
         fontFamily: 'Roboto',
+        textTheme: Theme.of(context).textTheme.apply(
+              fontFamily: 'Roboto',
+              bodyColor: Colors.black,
+              displayColor: Colors.black,
+            ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Color(0xFF1A73E8),
           foregroundColor: Colors.white,
@@ -59,7 +61,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
         floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: const Color(0xFF1A73E8),
+          backgroundColor: Color(0xFF1A73E8),
           foregroundColor: Colors.white,
         ),
       ),

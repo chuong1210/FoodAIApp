@@ -1,4 +1,5 @@
 class UserModel {
+  String? username;
   double? height; // cm
   double? weight; // kg
   double? targetWeight; // kg
@@ -8,8 +9,10 @@ class UserModel {
   String? dietType; // 'vegetarian', 'vegan', 'high_protein', 'balanced', etc.
   String?
       activityLevel; // 'sedentary', 'light', 'moderate', 'active', 'very_active'
+  DateTime? dateOfBirth;
 
   UserModel({
+    this.username,
     this.height,
     this.weight,
     this.targetWeight,
@@ -18,6 +21,7 @@ class UserModel {
     List<String>? allergies,
     this.dietType,
     this.activityLevel,
+    this.dateOfBirth,
   }) {
     this.medicalConditions = medicalConditions ?? [];
     this.allergies = allergies ?? [];
@@ -25,6 +29,7 @@ class UserModel {
 
   Map<String, dynamic> toJson() {
     return {
+      'username': username,
       'height': height,
       'weight': weight,
       'targetWeight': targetWeight,
@@ -33,11 +38,13 @@ class UserModel {
       'allergies': allergies,
       'dietType': dietType,
       'activityLevel': activityLevel,
+      'dateOfBirth': dateOfBirth?.toIso8601String(),
     };
   }
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
+      username: json['username'],
       height: json['height'],
       weight: json['weight'],
       targetWeight: json['targetWeight'],
@@ -46,6 +53,9 @@ class UserModel {
       allergies: List<String>.from(json['allergies'] ?? []),
       dietType: json['dietType'],
       activityLevel: json['activityLevel'],
+      dateOfBirth: json['dateOfBirth'] != null
+          ? DateTime.parse(json['dateOfBirth'])
+          : null,
     );
   }
 }

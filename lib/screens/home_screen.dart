@@ -3,6 +3,8 @@ import 'package:camera/camera.dart';
 import '../camera_screen.dart';
 import '../models/user_model.dart';
 import '../services/user_service.dart';
+import '../widgets/nutrition_chart.dart';
+import 'meal_plan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -13,15 +15,27 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   UserModel? _userData;
   bool _isLoading = true;
+  late AnimationController _animationController;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -33,9 +47,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index == 2) {
+      // Center button - Camera
+      _openCamera();
+    } else {
+      setState(() {
+        _selectedIndex = index;
+      });
+      _animationController.reset();
+      _animationController.forward();
+    }
   }
 
   void _openCamera() {
@@ -50,71 +71,104 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _selectedIndex == 0 ? _buildHomeTab() : _buildHistoryTab(),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
-            ),
-          ],
-        ),
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8.0,
-          color: Colors.white,
-          elevation: 0,
-          child: Container(
-            height: 60,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: <Widget>[
-                _buildNavItem(0, Icons.home, 'Home'),
-                const SizedBox(width: 48.0),
-                _buildNavItem(1, Icons.history, 'History'),
-              ],
-            ),
-          ),
-        ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          _buildHomeTab(),
+          const MealPlanScreen(),
+          Container(), // Placeholder for camera
+          _buildProfileTab(),
+          _buildSettingsTab(),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openCamera,
-        elevation: 4,
-        child: const Icon(Icons.camera_alt, size: 28),
+      floatingActionButton: Transform.scale(
+        scale: 1.1,
+        child: FloatingActionButton(
+          onPressed: _openCamera,
+          backgroundColor: const Color(0xFF1A73E8),
+          elevation: 8,
+          child: const Icon(Icons.camera_alt, size: 28),
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isSelected = _selectedIndex == index;
-    return InkWell(
-      onTap: () => _onItemTapped(index),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isSelected ? Theme.of(context).primaryColor : Colors.grey,
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Theme.of(context).primaryColor : Colors.grey,
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
           ),
         ],
       ),
+      child: SafeArea(
+        child: Container(
+          height: 60,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(0, Icons.home_outlined, Icons.home, 'Trang chủ'),
+              _buildNavItem(1, Icons.restaurant_menu_outlined,
+                  Icons.restaurant_menu, 'Thực đơn'),
+              // Placeholder for FAB
+              const SizedBox(width: 60),
+              _buildNavItem(3, Icons.person_outline, Icons.person, 'Hồ sơ'),
+              _buildNavItem(
+                  4, Icons.settings_outlined, Icons.settings, 'Cài đặt'),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
+  Widget _buildNavItem(
+      int index, IconData icon, IconData activeIcon, String label) {
+    final isSelected = _selectedIndex == index;
+
+    return InkWell(
+      onTap: () => _onItemTapped(index),
+      customBorder: const CircleBorder(),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? const Color(0xFF1A73E8).withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? activeIcon : icon,
+              color: isSelected ? const Color(0xFF1A73E8) : Colors.grey,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? const Color(0xFF1A73E8) : Colors.grey,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Các phương thức khác giữ nguyên
   Widget _buildHomeTab() {
     return Stack(
       children: [
@@ -185,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Xin chào${_userData?.gender == 'male' ? ' anh' : _userData?.gender == 'female' ? ' chị' : ''}!',
+                                'Xin chào${_userData?.username != null ? ' ${_userData!.username}' : ''}!',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
@@ -232,6 +286,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           height: 200,
                           width: double.infinity,
                           fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 200,
+                              color: Colors.grey[300],
+                              child: const Center(
+                                child: Icon(Icons.image_not_supported,
+                                    size: 50, color: Colors.grey),
+                              ),
+                            );
+                          },
                         ),
                       ),
 
@@ -273,7 +337,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-
+                const SizedBox(height: 20),
+                _buildNutritionChart(),
+                const SizedBox(height: 20),
                 // Features Section
                 Padding(
                   padding: const EdgeInsets.all(20),
@@ -307,6 +373,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
+                // Add extra padding at the bottom to avoid content being hidden by the navigation bar
+                const SizedBox(height: 100),
               ],
             ),
           ),
@@ -366,19 +434,28 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHistoryTab() {
+  Widget _buildNutritionChart() {
+    // These values should be calculated based on user data and daily intake
+    return const NutritionChart(
+      calories: 2000,
+      protein: 100,
+      carbs: 250,
+      fat: 65,
+    );
+  }
+
+  Widget _buildProfileTab() {
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // App Bar
           Container(
             padding: const EdgeInsets.all(20),
             color: const Color(0xFF1A73E8),
             child: const Row(
               children: [
                 Text(
-                  'Scan History',
+                  'Hồ sơ cá nhân',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -388,21 +465,19 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-
-          // Empty state
           Expanded(
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.history,
+                    Icons.person_outline,
                     size: 80,
                     color: Colors.grey.withOpacity(0.5),
                   ),
                   const SizedBox(height: 20),
                   const Text(
-                    'No History Yet',
+                    'Tính năng đang phát triển',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -411,17 +486,68 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'Your food scan history will appear here',
+                    'Chức năng này sẽ sớm được cập nhật',
                     style: TextStyle(
                       fontSize: 16,
                       color: Colors.grey,
                     ),
                   ),
-                  const SizedBox(height: 30),
-                  ElevatedButton.icon(
-                    onPressed: _openCamera,
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Scan Food'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsTab() {
+    return SafeArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            color: const Color(0xFF1A73E8),
+            child: const Row(
+              children: [
+                Text(
+                  'Cài đặt',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.settings_outlined,
+                    size: 80,
+                    color: Colors.grey.withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Tính năng đang phát triển',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Chức năng này sẽ sớm được cập nhật',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
                   ),
                 ],
               ),

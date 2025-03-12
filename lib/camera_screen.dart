@@ -22,14 +22,13 @@ class _CameraScreenState extends State<CameraScreen>
   bool _isScanning = false;
   late AnimationController _animationController;
   late Animation<double> _animation;
+  bool _isFlashOn = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize camera
     _initializeCamera();
 
-    // Set up scanning animation
     _animationController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
@@ -58,6 +57,13 @@ class _CameraScreenState extends State<CameraScreen>
     super.dispose();
   }
 
+  void _toggleFlash() {
+    setState(() {
+      _isFlashOn = !_isFlashOn;
+    });
+    _controller.setFlashMode(_isFlashOn ? FlashMode.torch : FlashMode.off);
+  }
+
   Future<void> _takePicture() async {
     if (_isScanning) return;
 
@@ -71,7 +77,6 @@ class _CameraScreenState extends State<CameraScreen>
 
       if (!mounted) return;
 
-      // Navigate to result screen after a short delay to show scanning animation
       await Future.delayed(const Duration(seconds: 1));
 
       setState(() {
@@ -115,7 +120,6 @@ class _CameraScreenState extends State<CameraScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // Camera preview
           FutureBuilder<void>(
             future: _initializeControllerFuture,
             builder: (context, snapshot) {
@@ -133,8 +137,6 @@ class _CameraScreenState extends State<CameraScreen>
               }
             },
           ),
-
-          // Scanning effect
           if (_isScanning)
             AnimatedBuilder(
               animation: _animation,
@@ -151,8 +153,6 @@ class _CameraScreenState extends State<CameraScreen>
                 );
               },
             ),
-
-          // Overlay with instructions
           if (!_isScanning)
             Positioned(
               top: 100,
@@ -176,8 +176,6 @@ class _CameraScreenState extends State<CameraScreen>
                 ),
               ),
             ),
-
-          // Camera controls
           Positioned(
             bottom: 0,
             left: 0,
@@ -197,7 +195,6 @@ class _CameraScreenState extends State<CameraScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  // Gallery button
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
@@ -209,8 +206,6 @@ class _CameraScreenState extends State<CameraScreen>
                       onPressed: _pickImage,
                     ),
                   ),
-
-                  // Camera button
                   GestureDetector(
                     onTap: _isScanning ? null : _takePicture,
                     child: Container(
@@ -231,15 +226,24 @@ class _CameraScreenState extends State<CameraScreen>
                       ),
                     ),
                   ),
-
-                  // Placeholder for layout balance
-                  const SizedBox(width: 50),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      onPressed: _toggleFlash,
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-
-          // Back button
           Positioned(
             top: 40,
             left: 20,
