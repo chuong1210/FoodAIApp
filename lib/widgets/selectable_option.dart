@@ -21,10 +21,14 @@ class SelectableOption extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF1A73E8).withOpacity(0.1) : Colors.white,
+          color: isSelected
+              ? const Color(0xFF1A73E8).withOpacity(0.1)
+              : Colors.white,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? const Color(0xFF1A73E8) : Colors.grey.withOpacity(0.3),
+            color: isSelected
+                ? const Color(0xFF1A73E8)
+                : Colors.grey.withOpacity(0.3),
             width: 1,
           ),
         ),
@@ -41,7 +45,9 @@ class SelectableOption extends StatelessWidget {
                     color: isSelected ? const Color(0xFF1A73E8) : Colors.white,
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(
-                      color: isSelected ? Colors.transparent : Colors.grey.withOpacity(0.5),
+                      color: isSelected
+                          ? Colors.transparent
+                          : Colors.grey.withOpacity(0.5),
                       width: 1.5,
                     ),
                   ),
@@ -61,7 +67,9 @@ class SelectableOption extends StatelessWidget {
                     color: isSelected ? const Color(0xFF1A73E8) : Colors.white,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isSelected ? Colors.transparent : Colors.grey.withOpacity(0.5),
+                      color: isSelected
+                          ? Colors.transparent
+                          : Colors.grey.withOpacity(0.5),
                       width: 1.5,
                     ),
                   ),
@@ -79,15 +87,17 @@ class SelectableOption extends StatelessWidget {
                       : null,
                 ),
               const SizedBox(width: 12),
-              
+
               // Title
               Expanded(
                 child: Text(
                   title,
                   style: TextStyle(
                     fontSize: 16,
-                    color: isSelected ? const Color(0xFF1A73E8) : Colors.black87,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color:
+                        isSelected ? const Color(0xFF1A73E8) : Colors.black87,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ),
@@ -98,4 +108,3 @@ class SelectableOption extends StatelessWidget {
     );
   }
 }
-

@@ -32,12 +32,28 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                     const TimeOfDay(hour: 7, minute: 0),
                   ),
                   _buildMealCard(
+                    'Bữa nhẹ buổi sáng',
+                    'Hoa quả và hạt dinh dưỡng',
+                    '150 kcal',
+                    'morning_snack',
+                    ['1 quả táo', '30g hạt hỗn hợp', '1 ly nước ép'],
+                    const TimeOfDay(hour: 10, minute: 0),
+                  ),
+                  _buildMealCard(
                     'Bữa trưa',
                     'Cơm gà và rau xào',
                     '550 kcal',
                     'lunch',
                     ['150g cơm', '200g gà', '100g rau xào'],
                     const TimeOfDay(hour: 12, minute: 0),
+                  ),
+                  _buildMealCard(
+                    'Bữa nhẹ buổi chiều',
+                    'Sữa chua và granola',
+                    '200 kcal',
+                    'afternoon_snack',
+                    ['1 hộp sữa chua', '30g granola', '1 muỗng mật ong'],
+                    const TimeOfDay(hour: 15, minute: 0),
                   ),
                   _buildMealCard(
                     'Bữa tối',
@@ -48,8 +64,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                     const TimeOfDay(hour: 19, minute: 0),
                   ),
                   _buildExerciseCard(),
-                  // Add extra padding at the bottom to avoid content being hidden by the navigation bar
-                  const SizedBox(height: 100),
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
@@ -192,7 +207,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
   Widget _buildMealCard(String title, String description, String calories,
       String mealType, List<String> ingredients, TimeOfDay time) {
-    // Sử dụng màu sắc khác nhau cho các loại bữa ăn
+    // Thêm màu sắc cho các bữa ăn nhẹ
     Color cardColor;
     IconData mealIcon;
 
@@ -201,9 +216,17 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
         cardColor = Colors.orange.withOpacity(0.1);
         mealIcon = Icons.wb_sunny_outlined;
         break;
+      case 'morning_snack':
+        cardColor = Colors.amber.withOpacity(0.1);
+        mealIcon = Icons.apple;
+        break;
       case 'lunch':
         cardColor = Colors.green.withOpacity(0.1);
         mealIcon = Icons.restaurant_outlined;
+        break;
+      case 'afternoon_snack':
+        cardColor = Colors.teal.withOpacity(0.1);
+        mealIcon = Icons.coffee;
         break;
       case 'dinner':
         cardColor = Colors.blue.withOpacity(0.1);
@@ -216,7 +239,7 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
+      elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
       ),
@@ -240,17 +263,25 @@ class _MealPlanScreenState extends State<MealPlanScreen> {
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ],
                 ),
-                Text(
-                  '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontWeight: FontWeight.bold,
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${time.hour}:${time.minute.toString().padLeft(2, '0')}',
+                    style: const TextStyle(
+                      color: Color(0xFF1A73E8),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],

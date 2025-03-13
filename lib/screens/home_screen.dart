@@ -20,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen>
   int _selectedIndex = 0;
   UserModel? _userData;
   bool _isLoading = true;
-  late AnimationController _animationController;
+  AnimationController? _animationController;
 
   @override
   void initState() {
@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _animationController?.dispose();
     super.dispose();
   }
 
@@ -54,8 +54,10 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         _selectedIndex = index;
       });
-      _animationController.reset();
-      _animationController.forward();
+      if (_animationController != null) {
+        _animationController!.reset();
+        _animationController!.forward();
+      }
     }
   }
 
@@ -81,13 +83,35 @@ class _HomeScreenState extends State<HomeScreen>
           _buildSettingsTab(),
         ],
       ),
-      floatingActionButton: Transform.scale(
-        scale: 1.1,
-        child: FloatingActionButton(
-          onPressed: _openCamera,
-          backgroundColor: const Color(0xFF1A73E8),
-          elevation: 8,
-          child: const Icon(Icons.camera_alt, size: 28),
+      floatingActionButton: Transform.translate(
+        offset: const Offset(0, 10),
+        child: Container(
+          height: 56,
+          width: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                const Color(0xFF1A73E8),
+                const Color(0xFF1A73E8).withOpacity(0.8),
+              ],
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF1A73E8).withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: FloatingActionButton(
+            onPressed: _openCamera,
+            elevation: 0,
+            backgroundColor: Colors.transparent,
+            child: const Icon(Icons.camera_alt, size: 24),
+          ),
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -101,27 +125,30 @@ class _HomeScreenState extends State<HomeScreen>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(0.05),
             offset: const Offset(0, -5),
+            blurRadius: 10,
           ),
         ],
       ),
       child: SafeArea(
         child: Container(
-          height: 60,
           padding: const EdgeInsets.symmetric(horizontal: 8),
+          width: double.infinity,
+          height: 56, // Giảm chiều cao xuống
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _buildNavItem(0, Icons.home_outlined, Icons.home, 'Trang chủ'),
-              _buildNavItem(1, Icons.restaurant_menu_outlined,
-                  Icons.restaurant_menu, 'Thực đơn'),
-              // Placeholder for FAB
-              const SizedBox(width: 60),
-              _buildNavItem(3, Icons.person_outline, Icons.person, 'Hồ sơ'),
-              _buildNavItem(
-                  4, Icons.settings_outlined, Icons.settings, 'Cài đặt'),
+              Expanded(
+                  child:
+                      _buildNavItem(0, Icons.dashboard_outlined, 'Trang chủ')),
+              Expanded(
+                  child: _buildNavItem(
+                      1, Icons.restaurant_menu_outlined, 'Thực đơn')),
+              const SizedBox(width: 56), // Space for FAB
+              Expanded(child: _buildNavItem(3, Icons.person_outline, 'Hồ sơ')),
+              Expanded(
+                  child: _buildNavItem(4, Icons.settings_outlined, 'Cài đặt')),
             ],
           ),
         ),
@@ -129,27 +156,20 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildNavItem(
-      int index, IconData icon, IconData activeIcon, String label) {
+  Widget _buildNavItem(int index, IconData icon, String label) {
     final isSelected = _selectedIndex == index;
 
-    return InkWell(
-      onTap: () => _onItemTapped(index),
-      customBorder: const CircleBorder(),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF1A73E8).withOpacity(0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(15),
-        ),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _onItemTapped(index),
+        customBorder: const StadiumBorder(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isSelected ? activeIcon : icon,
+              icon,
               color: isSelected ? const Color(0xFF1A73E8) : Colors.grey,
               size: 24,
             ),
@@ -158,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen>
               label,
               style: TextStyle(
                 color: isSelected ? const Color(0xFF1A73E8) : Colors.grey,
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
@@ -198,8 +218,8 @@ class _HomeScreenState extends State<HomeScreen>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Food Scanner',
+                      Text(
+                        'NutriLens', // Đổi từ 'Food Scanner' thành 'NutriLens'
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 28,
