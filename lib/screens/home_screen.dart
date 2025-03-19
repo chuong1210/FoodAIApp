@@ -5,6 +5,8 @@ import '../models/user_model.dart';
 import '../services/user_service.dart';
 import '../widgets/nutrition_chart.dart';
 import 'meal_plan_screen.dart';
+import '../widgets/chat_bubble.dart';
+import 'chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -219,24 +221,71 @@ class _HomeScreenState extends State<HomeScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'NutriLens', // Đổi từ 'Food Scanner' thành 'NutriLens'
+                        'NutriLens',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      CircleAvatar(
-                        backgroundColor: Colors.white.withOpacity(0.3),
-                        child: const Icon(
-                          Icons.person,
-                          color: Colors.white,
-                        ),
+                      Row(
+                        children: [
+                          // Chat button
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => const ChatScreen()),
+                              );
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.only(right: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.3),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Stack(
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Icon(
+                                      Icons.chat_bubble_outline,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 5,
+                                    top: 5,
+                                    child: Container(
+                                      height: 8,
+                                      width: 8,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Profile icon
+                          CircleAvatar(
+                            backgroundColor: Colors.white.withOpacity(0.3),
+                            child: const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
 
+                // Rest of the content remains the same
                 // User info card
                 if (_userData != null)
                   Container(
@@ -326,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
-                              'Identify Food & Nutrition',
+                              'Nhận diện thực phẩm & Dinh dưỡng',
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.bold,
@@ -335,7 +384,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                             const SizedBox(height: 10),
                             const Text(
-                              'Take a photo of your food to identify it and get detailed nutritional information instantly.',
+                              'Chụp ảnh thực phẩm của bạn để nhận diện và nhận thông tin dinh dưỡng chi tiết ngay lập tức.',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.black87,
@@ -346,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen>
                             ElevatedButton.icon(
                               onPressed: _openCamera,
                               icon: const Icon(Icons.camera_alt),
-                              label: const Text('Scan Food Now'),
+                              label: const Text('Quét thực phẩm ngay'),
                               style: ElevatedButton.styleFrom(
                                 minimumSize: const Size(double.infinity, 50),
                               ),
@@ -367,7 +416,7 @@ class _HomeScreenState extends State<HomeScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Features',
+                        'Tính năng',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -377,23 +426,23 @@ class _HomeScreenState extends State<HomeScreen>
                       const SizedBox(height: 15),
                       _buildFeatureItem(
                         Icons.camera_alt,
-                        'Quick Scan',
-                        'Instantly identify food with our camera',
+                        'Quét nhanh',
+                        'Nhận diện thực phẩm tức thì với camera',
                       ),
                       _buildFeatureItem(
                         Icons.restaurant_menu,
-                        'Nutrition Facts',
-                        'Get detailed nutritional information',
+                        'Thông tin dinh dưỡng',
+                        'Xem chi tiết giá trị dinh dưỡng của thực phẩm',
                       ),
                       _buildFeatureItem(
                         Icons.history,
-                        'History',
-                        'Keep track of your food scans',
+                        'Lịch sử',
+                        'Theo dõi các lần quét thực phẩm của bạn',
                       ),
                     ],
                   ),
                 ),
-                // Add extra padding at the bottom to avoid content being hidden by the navigation bar
+                // Add extra padding at the bottom
                 const SizedBox(height: 100),
               ],
             ),
@@ -456,11 +505,14 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildNutritionChart() {
     // These values should be calculated based on user data and daily intake
-    return const NutritionChart(
-      calories: 2000,
-      protein: 100,
-      carbs: 250,
-      fat: 65,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6), // Tăng từ 4 lên 6
+      child: const NutritionChart(
+        calories: 2000,
+        protein: 100,
+        carbs: 250,
+        fat: 65,
+      ),
     );
   }
 

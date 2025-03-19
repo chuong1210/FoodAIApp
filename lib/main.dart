@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/onboarding/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'services/user_service.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +31,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Food Recognition',
+      title: 'NutriLens',
       theme: ThemeData(
         primaryColor: const Color(0xFF1A73E8),
         colorScheme: ColorScheme.fromSeed(
@@ -65,9 +66,7 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: isOnboardingComplete
-          ? HomeScreen(cameras: cameras)
-          : OnboardingScreen(cameras: cameras),
+      home: SplashScreen(cameras: cameras),
       debugShowCheckedModeBanner: false,
     );
   }

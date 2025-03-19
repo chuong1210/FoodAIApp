@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:math' as math;
 
 class NutritionChart extends StatefulWidget {
   final double calories;
@@ -16,14 +17,18 @@ class NutritionChart extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  State<NutritionChart> createState() => _NutritionChartState();
+  _NutritionChartState createState() => _NutritionChartState();
 }
 
 class _NutritionChartState extends State<NutritionChart>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _animation;
-  int touchedIndex = -1;
+
+  // Màu sắc đẹp hơn cho biểu đồ
+  final Color proteinColor = const Color(0xFFFF6B6B);
+  final Color carbsColor = const Color(0xFF48DBFB);
+  final Color fatColor = const Color(0xFFFECA57);
 
   @override
   void initState() {
@@ -32,10 +37,12 @@ class _NutritionChartState extends State<NutritionChart>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
+
     _animation = CurvedAnimation(
       parent: _animationController,
-      curve: Curves.easeInOutCubic,
+      curve: Curves.easeInOut,
     );
+
     _animationController.forward();
   }
 
@@ -47,295 +54,204 @@ class _NutritionChartState extends State<NutritionChart>
 
   @override
   Widget build(BuildContext context) {
+    // Tính tổng giá trị dinh dưỡng
     final total = widget.protein + widget.carbs + widget.fat;
-    final proteinPercentage = (widget.protein / total * 100).round();
-    final carbsPercentage = (widget.carbs / total * 100).round();
-    final fatPercentage = (widget.fat / total * 100).round();
 
-    // Tính toán lượng calo còn lại
-    final dailyCalories = 2500.0; // Giả sử mục tiêu hàng ngày là 2500 calo
-    final remainingCalories = dailyCalories - widget.calories;
-    final caloriesPercentage = (widget.calories / dailyCalories * 100).round();
+    // Tính phần trăm
+    final proteinPercent = (widget.protein / total * 100).round();
+    final carbsPercent = (widget.carbs / total * 100).round();
+    final fatPercent = (widget.fat / total * 100).round();
+
+    // Tính lượng calo còn lại trong ngày (giả sử mục tiêu là 2500 calo)
+    final targetCalories = 2500.0;
+    final remainingCalories = targetCalories - widget.calories;
+    final caloriesPercent =
+        (widget.calories / targetCalories * 100).clamp(0, 100).round();
+
+    // Sửa lỗi overflow bằng cách điều chỉnh margin và padding
+    // Thay đổi margin từ symmetric(horizontal: 20) thành all(16)
+    // và điều chỉnh padding từ all(20) thành all(16)
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.all(14), // Giảm từ 16 xuống 14
+      padding: const EdgeInsets.all(14), // Giảm từ 16 xuống 14
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
           ),
         ],
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            Colors.grey.shade50,
+          ],
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Dinh dưỡng hôm nay',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A73E8),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Còn lại ${remainingCalories.toInt()} calo',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
+          // Tiêu đề
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A73E8).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A73E8).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department,
-                        color: Color(0xFF1A73E8),
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${widget.calories.toInt()} calo',
-                        style: const TextStyle(
-                          color: Color(0xFF1A73E8),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
+                child: const Icon(
+                  Icons.pie_chart,
+                  color: Color(0xFF1A73E8),
+                  size: 24,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Chỉ tiêu dinh dưỡng hôm nay',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A73E8),
+                ),
+              ),
+            ],
           ),
 
-          // Calories Progress
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Tiến độ calo',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '$caloriesPercentage%',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A73E8),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                AnimatedBuilder(
+          const SizedBox(height: 20),
+
+          // Biểu đồ calo
+          _buildCaloriesProgressBar(caloriesPercent, remainingCalories),
+
+          const SizedBox(height: 25),
+
+          // Biểu đồ tròn và thông tin
+          Row(
+            children: [
+              // Biểu đồ tròn
+              Expanded(
+                flex: 5, // Thay đổi từ 3 xuống 5
+                child: AnimatedBuilder(
                   animation: _animation,
                   builder: (context, child) {
-                    return Stack(
-                      children: [
-                        // Background
-                        Container(
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        // Progress
-                        FractionallySizedBox(
-                          widthFactor: _animation.value *
-                              (widget.calories / dailyCalories),
-                          child: Container(
-                            height: 8,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF1A73E8), Color(0xFF66B2FF)],
-                              ),
-                              borderRadius: BorderRadius.circular(4),
+                    return SizedBox(
+                      height: 160, // Giảm từ 180 xuống 160
+                      child: Stack(
+                        children: [
+                          PieChart(
+                            PieChartData(
+                              sectionsSpace: 0,
+                              centerSpaceRadius: 35, // Giảm từ 40 xuống 35
+                              sections: [
+                                PieChartSectionData(
+                                  color: proteinColor,
+                                  value: widget.protein * _animation.value,
+                                  title: '',
+                                  radius: 70, // Giảm từ 80 xuống 70
+                                  titleStyle: const TextStyle(fontSize: 0),
+                                ),
+                                PieChartSectionData(
+                                  color: carbsColor,
+                                  value: widget.carbs * _animation.value,
+                                  title: '',
+                                  radius: 70, // Giảm từ 80 xuống 70
+                                  titleStyle: const TextStyle(fontSize: 0),
+                                ),
+                                PieChartSectionData(
+                                  color: fatColor,
+                                  value: widget.fat * _animation.value,
+                                  title: '',
+                                  radius: 70, // Giảm từ 80 xuống 70
+                                  titleStyle: const TextStyle(fontSize: 0),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      ],
+                          // Hiển thị tổng calo ở giữa
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  '${(widget.calories * _animation.value).toInt()}',
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1A73E8),
+                                  ),
+                                ),
+                                const Text(
+                                  'Calo',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
-              ],
-            ),
+              ),
+
+              // Thông tin chi tiết
+              Expanded(
+                flex: 4, // Thay đổi từ 2 lên 4
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildNutrientInfo('Protein', widget.protein,
+                          proteinPercent, proteinColor),
+                      const SizedBox(height: 15),
+                      _buildNutrientInfo(
+                          'Carbs', widget.carbs, carbsPercent, carbsColor),
+                      const SizedBox(height: 15),
+                      _buildNutrientInfo(
+                          'Chất béo', widget.fat, fatPercent, fatColor),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
 
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
 
-          // Pie Chart and Legend
-          SizedBox(
-            height: 180,
+          // Thông tin bổ sung
+          Container(
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
             child: Row(
               children: [
-                // Pie Chart
-                Expanded(
-                  flex: 3,
-                  child: AnimatedBuilder(
-                    animation: _animation,
-                    builder: (context, child) {
-                      return PieChart(
-                        PieChartData(
-                          pieTouchData: PieTouchData(
-                            touchCallback:
-                                (FlTouchEvent event, pieTouchResponse) {
-                              setState(() {
-                                if (!event.isInterestedForInteractions ||
-                                    pieTouchResponse == null ||
-                                    pieTouchResponse.touchedSection == null) {
-                                  touchedIndex = -1;
-                                  return;
-                                }
-                                touchedIndex = pieTouchResponse
-                                    .touchedSection!.touchedSectionIndex;
-                              });
-                            },
-                          ),
-                          borderData: FlBorderData(show: false),
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 30,
-                          sections: [
-                            PieChartSectionData(
-                              color: const Color(0xFF4CAF50), // Green for carbs
-                              value: widget.carbs * _animation.value,
-                              title: '$carbsPercentage%',
-                              radius: touchedIndex == 0 ? 60 : 50,
-                              titleStyle: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            PieChartSectionData(
-                              color: const Color(0xFFF44336), // Red for protein
-                              value: widget.protein * _animation.value,
-                              title: '$proteinPercentage%',
-                              radius: touchedIndex == 1 ? 60 : 50,
-                              titleStyle: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            PieChartSectionData(
-                              color: const Color(0xFF2196F3), // Blue for fat
-                              value: widget.fat * _animation.value,
-                              title: '$fatPercentage%',
-                              radius: touchedIndex == 2 ? 60 : 50,
-                              titleStyle: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                const Icon(
+                  Icons.info_outline,
+                  color: Colors.grey,
+                  size: 20,
                 ),
-
-                // Legend
+                const SizedBox(width: 10),
                 Expanded(
-                  flex: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 10),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.max,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildLegendItem(
-                          'Carbs',
-                          '${widget.carbs.toInt()}g',
-                          const Color(0xFF4CAF50),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildLegendItem(
-                          'Protein',
-                          '${widget.protein.toInt()}g',
-                          const Color(0xFFF44336),
-                        ),
-                        const SizedBox(height: 12),
-                        _buildLegendItem(
-                          'Fat',
-                          '${widget.fat.toInt()}g',
-                          const Color(0xFF2196F3),
-                        ),
-                      ],
+                  child: Text(
+                    'Mục tiêu hàng ngày: ${targetCalories.toInt()} calo. Còn lại: ${remainingCalories.toInt()} calo.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade700,
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-
-          // Nutrition Bars
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Chi tiết dinh dưỡng',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildNutritionBar(
-                  'Carbs',
-                  widget.carbs,
-                  300, // Giả sử mục tiêu hàng ngày là 300g
-                  const Color(0xFF4CAF50),
-                ),
-                const SizedBox(height: 10),
-                _buildNutritionBar(
-                  'Protein',
-                  widget.protein,
-                  150, // Giả sử mục tiêu hàng ngày là 150g
-                  const Color(0xFFF44336),
-                ),
-                const SizedBox(height: 10),
-                _buildNutritionBar(
-                  'Fat',
-                  widget.fat,
-                  70, // Giả sử mục tiêu hàng ngày là 70g
-                  const Color(0xFF2196F3),
                 ),
               ],
             ),
@@ -345,81 +261,147 @@ class _NutritionChartState extends State<NutritionChart>
     );
   }
 
-  Widget _buildLegendItem(String title, String value, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 12,
-          height: 12,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(3),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            title,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNutritionBar(
-      String title, double value, double target, Color color) {
-    final percentage = (value / target).clamp(0.0, 1.0);
-
+  Widget _buildCaloriesProgressBar(int percent, double remaining) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 13,
+            const Text(
+              'Tiến độ calo',
+              style: TextStyle(
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
             Text(
-              '${value.toInt()}g / ${target.toInt()}g',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
+              '$percent%',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1A73E8),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
-        AnimatedBuilder(
-          animation: _animation,
-          builder: (context, child) {
-            return Stack(
+        const SizedBox(height: 10),
+        Stack(
+          children: [
+            // Nền của thanh tiến độ
+            Container(
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade200,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            // Phần đã hoàn thành
+            AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) {
+                return FractionallySizedBox(
+                  widthFactor:
+                      (percent / 100 * _animation.value).clamp(0.0, 1.0),
+                  child: Container(
+                    height: 12,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          const Color(0xFF1A73E8),
+                          const Color(0xFF66B2FF),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF1A73E8).withOpacity(0.3),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 5),
+        Text(
+          'Còn lại: ${remaining.toInt()} calo',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNutrientInfo(
+      String label, double value, int percent, Color color) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                // Background
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${(value * _animation.value).toInt()}g',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                Text(
+                  '$percent%',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            // Thanh tiến độ
+            Stack(
+              children: [
                 Container(
                   height: 6,
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
-                // Progress
                 FractionallySizedBox(
-                  widthFactor: percentage * _animation.value,
+                  widthFactor:
+                      (percent / 100 * _animation.value).clamp(0.0, 1.0),
                   child: Container(
                     height: 6,
                     decoration: BoxDecoration(
@@ -429,10 +411,10 @@ class _NutritionChartState extends State<NutritionChart>
                   ),
                 ),
               ],
-            );
-          },
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }
